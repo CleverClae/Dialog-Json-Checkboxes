@@ -8,32 +8,34 @@ import subprocess
 # set to false to generate an intermediate json file
 # set to true to pass generated json in as a string
 stringinput = True
-DIALOG = "/usr/local/bin/dialog" 
+DIALOG = "/usr/local/bin/dialog"
 DIALOG_COMMAND_FILE = "/var/tmp/dialog.log"
-Icons=""
+Icons = ""
 dialog_app = "/Library/Application Support/Dialog/Dialog.app/Contents/MacOS/Dialog"
 
 jamfcmd = [
-        "usr/local/bin/jamf policy",
-        "-trigger",
-    ]
+    "usr/local/bin/jamf policy",
+    "-trigger",
+]
+
 
 def Jamf_Command():
     "Install app"
-    
 
-    
-optional_apps = {"label" : "Atom", "checked" : "false"},\
-	  		{"label" : "Sublime Txt", "checked" : "false"},\
-	  		{"label" : "BBedit", "checked" : "false"},\
-	  		{"label" : "VSCode", "checked" : "false"}, \
-	  		{"label" : "Microsoft Remote Desktop", "checked" : "false"}, \
-	  		{"label" : "Apple Remote Desktop", "checked" : "false"}
+
+optional_apps = {"label": "Atom", "checked": "false"},\
+    {"label": "Sublime Txt", "checked": "false"},\
+    {"label": "BBedit", "checked": "false"},\
+    {"label": "VSCode", "checked": "false"}, \
+    {"label": "Microsoft Remote Desktop", "checked": "false"}, \
+    {"label": "Apple Remote Desktop", "checked": "false"}
+
 
 def update_dialog(command, value=""):
     """Updates the current dialog window"""
     with open(DIALOG_COMMAND_FILE, "a") as log:
         log.write(f"{command}: {value}\n")
+
 
 class DialogAlert:
     def __init__(self):
@@ -69,7 +71,8 @@ class DialogAlert:
         """Runs the SwiftDialog app and returns the exit code"""
         jsonString = json.dumps(contentDict)
         cmd = [DIALOG, "-o", "--jsonstring", jsonString, "--json"]
-        proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        proc = subprocess.Popen(
+            cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         if background:
             return proc
         (out, err) = proc.communicate(input)
@@ -86,7 +89,8 @@ class DialogAlert:
         for app, options in app_dict.items():
             jamfname = options.get("jamf_name", app)
             app_name = options.get("name_on_disk", app)
-            app_location = options.get("app_location", f"/Applications/{app_name}.app")
+            app_location = options.get(
+                "app_location", f"/Applications/{app_name}.app")
             icon = options.get("icon", f"{Icons}{jamfname}.png")
             time.sleep(1)
             update_dialog("progress", i)
@@ -107,19 +111,19 @@ class DialogAlert:
             update_dialog("progresstext", f"{app} installed.")
             time.sleep(1)
             i += 1
-           
 
-contentDict = {"title" : " IPG Health", 
-            "titlefont" : "name=Arial,colour=#3FD0a2,size=40",
-            "message" : "This is a **very important** messsage and you _should_ read it carefully\n\nThis is on a new line",
-            "icon" : "/Library/Application Support/JAMF/Jamf.app/Contents/Resources/AppIcon.icns",
-            "background" : "/Library/Application Support/IPG/image.png",
-            "hideicon" : 0,
-            "infobutton" : 1,
-            "quitoninfo" : 1,
-            "checkbox" : optional_apps
-}
-	
+
+contentDict = {"title": " IPG Health",
+               "titlefont": "name=Arial,colour=#3FD0a2,size=40",
+               "message": "This is a **very important** messsage and you _should_ read it carefully\n\nThis is on a new line",
+               "icon": "/Library/Application Support/JAMF/Jamf.app/Contents/Resources/AppIcon.icns",
+               "background": "/Library/Application Support/IPG/image.png",
+               "hideicon": 0,
+               "infobutton": 1,
+               "quitoninfo": 1,
+               "checkbox": optional_apps
+               }
+
 
 jsonString = json.dumps(contentDict)
 
@@ -129,7 +133,8 @@ if stringinput:
     apps_to_check = []
 
     for app in optional_apps:
-        apps_to_check.append({"label": app, "checked": optional_apps[app]["default"]})
+        apps_to_check.append(
+            {"label": app, "checked": optional_apps[app]["default"]})
     app_chooser = DialogAlert()
     app_chooser.app_install_dict["button1text"] = "Continue"
     app_chooser.app_install_dict["timer"] = "600"
@@ -146,7 +151,7 @@ if stringinput:
     # Once the results["stdout"] returns valid json, we could remove the workaround.
     write_log(f"Subprocess results: {results}")
     stdout = results["stdout"].decode("utf-8")
-    stdout_json = stdout[stdout.index("{") :]
+    stdout_json = stdout[stdout.index("{"):]
     write_log(f"Subprocess stdout cleaned: {json.loads(stdout_json)}")
     choosen_apps = {}
     if results["status"] == 0:
@@ -168,21 +173,17 @@ if stringinput:
         message = "Installing the selected applications:"
         write_log("Updating the self service manifest")
         update_self_service_manifest(apps_to_install)
-        threading.Thread(target=run_munki).start()
+        threading.Thread(target=jamfcmd).start()
         process_apps_to_install(apps_to_install, message)
-
 
     else:
         print("Using file Input")
-    
-    
+
     # create a temporary file
     jsonTMPFile = "/tmp/dialog.json"
     f = open(jsonTMPFile, "w")
     f.write(jsonString)
     f.close()
-    
-
 
     os.system("'{}' --jsonfile {}".format(dialog_app, jsonTMPFile))
 
